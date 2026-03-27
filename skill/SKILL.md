@@ -45,7 +45,7 @@ aquaculture / shrimp / 白斑 / WSSV / 蜕壳 / 增长报告 / 获客 / CRM
 | "机器狗去巡 A03 塘" | `sensor_read(adapter=dimos)` → DIMOS 控制机器狗 |
 | "系统状态" | GET `/api/health` → 三 Agent 健康检查 |
 
-## MCP 工具清单（12 个）
+## MCP 工具清单（17 个）
 
 | 工具 | 功能 | 谁用 |
 |------|------|------|
@@ -55,9 +55,13 @@ aquaculture / shrimp / 白斑 / WSSV / 蜕壳 / 增长报告 / 获客 / CRM
 | `disease_assess` | 病害评估 | Sentinel |
 | `harvest_advise` | 捕捞建议 | Strategist |
 | `kb_query` | 知识库检索（70 规则） | All |
-| `market_match` | 市场匹配 | Growth |
+| `market_match` | 买家智能匹配（MMR-2.0） | Growth |
+| `sell_window` | 最佳出货窗口分析 | Growth |
+| `market_report` | 一站式市场撮合报告 | Growth |
 | `price_trend` | 价格趋势 | Strategist, Growth |
 | `lead_score` | ICP 评分 | Growth |
+| `lead_discover` | 线索自动发现（10 个来源） | Growth |
+| `lead_process` | 线索处理（提取+评分+CRM） | Growth |
 | `crm_write` | CRM 写入 | Growth |
 | `feishu_push` | 飞书推送 | All |
 | `audit_log` | 审计日志 | All |

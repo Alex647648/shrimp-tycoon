@@ -34,15 +34,13 @@ backend_dir = Path(__file__).resolve().parent.parent / "backend"
 sys.path.insert(0, str(backend_dir))
 sys.path.insert(0, str(mcp_dir))
 
-from tools import (
+from core import (
     sensor_read as _tool_sensor_read,
     water_quality_score as _tool_water_quality_score,
     feeding_recommend as _tool_feeding_recommend,
     disease_assess as _tool_disease_assess,
     harvest_advise as _tool_harvest_advise,
-    market_match as _tool_market_match,
     price_trend as _tool_price_trend,
-    feishu_alert as _tool_feishu_alert,
     kb_query as _tool_kb_query,
 )
 
@@ -393,7 +391,9 @@ async def feishu_push(report: str, target: str = "user:ou_50801fcf36c698da7e26aa
         async with asyncio.timeout(5.0):
             report_dict = json.loads(report)
             # 调用飞书推送（异步）
-            message_id = await _tool_feishu_alert(report_dict, level)
+            from feishu import FeishuPusher
+            pusher = FeishuPusher()
+            message_id = await pusher.send_alert(report_dict, level)
             return json.dumps({
                 "success": message_id is not None,
                 "message_id": message_id,

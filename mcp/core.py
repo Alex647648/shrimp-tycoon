@@ -1,13 +1,19 @@
-"""MCP 工具层 — 9 个工具函数，可被后端直接调用。"""
+"""MCP 核心工具函数 — 无外部依赖，可独立测试。
+
+server.py 的 FastMCP 工具调用这些函数。
+测试直接导入本模块，不需要 fastmcp。
+"""
 
 import json
 from pathlib import Path
-
 import sys
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "backend"))
+
+# 添加 backend 到路径
+backend_dir = Path(__file__).resolve().parent.parent / "backend"
+sys.path.insert(0, str(backend_dir))
 
 from simulator import PondSimulator, compute_wqar, DEFAULT_SENSOR
-from sentinel import _rule_engine, _load_market_price
+from sentinel import _rule_engine
 
 KB_PATH = Path(__file__).resolve().parent.parent / "knowledge-base" / "crayfish_kb.md"
 PRICE_PATH = Path(__file__).resolve().parent.parent / "data" / "industry_based_price_data.json"
@@ -39,7 +45,7 @@ def disease_assess(sensor: dict, wqar: dict) -> dict:
     return report["disease"]
 
 
-def harvest_advise(sensor: dict, wqar: dict, market_price: float | None = None) -> dict:
+def harvest_advise(sensor: dict, wqar: dict, market_price=None) -> dict:
     """捕捞建议。"""
     report = _rule_engine(sensor, wqar)
     h = report["harvest"]
@@ -50,19 +56,6 @@ def harvest_advise(sensor: dict, wqar: dict, market_price: float | None = None) 
     return h
 
 
-def market_match(weight_kg: float, region: str = "湖北") -> dict:
-    """根据规格和地区匹配市场价格。"""
-    data = json.loads(PRICE_PATH.read_text(encoding="utf-8"))
-    cp = data["current_price"]
-    if weight_kg >= 0.04:
-        grade, price = "large", cp["large"]
-    elif weight_kg >= 0.025:
-        grade, price = "medium", cp["medium"]
-    else:
-        grade, price = "small", cp["small"]
-    return {"region": region, "grade": grade, "price_per_kg": price, "date": cp["date"]}
-
-
 def price_trend(days: int = 30) -> dict:
     """查询近 N 天价格趋势。"""
     data = json.loads(PRICE_PATH.read_text(encoding="utf-8"))
@@ -70,17 +63,12 @@ def price_trend(days: int = 30) -> dict:
     current = data["current_price"]["medium"]
     history = [{"date": p["date"], "price": p["medium"]} for p in prices]
     if len(prices) >= 2:
-        trend = "rising" if prices[-1]["medium"] > prices[0]["medium"] else ("falling" if prices[-1]["medium"] < prices[0]["medium"] else "stable")
+        trend = ("rising" if prices[-1]["medium"] > prices[0]["medium"]
+                 else "falling" if prices[-1]["medium"] < prices[0]["medium"]
+                 else "stable")
     else:
         trend = "stable"
     return {"current": current, "trend": trend, "history": history}
-
-
-async def feishu_alert(report: dict, level: str) -> str | None:
-    """发送飞书告警，返回 message_id。"""
-    from feishu import FeishuPusher
-    pusher = FeishuPusher()
-    return await pusher.send_alert(report, level)
 
 
 def kb_query(query: str) -> list[str]:
@@ -90,11 +78,11 @@ def kb_query(query: str) -> list[str]:
     except Exception:
         return []
     entries = text.split("---")
-    query_lower = query.lower()
+    q = query.lower()
     results = []
     for entry in entries:
-        if query_lower in entry.lower():
-            stripped = entry.strip()
-            if stripped:
-                results.append(stripped[:500])
+        if q in entry.lower():
+            s = entry.strip()
+            if s:
+                results.append(s[:500])
     return results[:5]
