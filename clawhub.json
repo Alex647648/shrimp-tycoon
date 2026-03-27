@@ -1,0 +1,15 @@
+{
+  "name": "shrimp-tycoon",
+  "version": "1.0.0",
+  "description": "AI智慧水产 Agent — 虾塘实时决策 + 自动日报 + 获客CRM",
+  "author": "Alex647648",
+  "repository": "https://github.com/Alex647648/shrimp-tycoon",
+  "skill": "skill/SKILL.md",
+  "setup": "setup.sh",
+  "requires": {
+    "mcp": true,
+    "env": ["ANTHROPIC_API_KEY", "FEISHU_APP_ID", "FEISHU_APP_SECRET"],
+    "optional_env": ["TUYA_CLIENT_ID", "DIMOS_MCP_URL", "SENSOR_MODE"]
+  },
+  "tags": ["agriculture", "aquaculture", "iot", "feishu", "crm"]
+}

@@ -1,0 +1,38 @@
+version: "3.9"
+services:
+  mcp-server:
+    build: .
+    command: ["python", "mcp/server.py", "--mode", "http", "--port", "8080"]
+    ports: ["8080:8080"]
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - FEISHU_APP_ID=${FEISHU_APP_ID}
+      - FEISHU_APP_SECRET=${FEISHU_APP_SECRET}
+      - SENSOR_MODE=${SENSOR_MODE:-mock}
+    deploy:
+      replicas: 3
+
+  backend:
+    build: .
+    command: ["python", "backend/server.py"]
+    ports: ["8766:8766"]
+    environment:
+      - MCP_SERVER_URL=http://mcp-server:8080
+      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@postgres:5432/shrimp_tycoon
+      - REDIS_URL=redis://redis:6379
+    depends_on: [postgres, redis]
+
+  postgres:
+    image: timescaledb/timescaledb:latest-pg15
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    environment:
+      - POSTGRES_DB=shrimp_tycoon
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+
+  redis:
+    image: redis:7-alpine
+    volumes: ["redis_data:/data"]
+
+volumes:
+  postgres_data:
+  redis_data:

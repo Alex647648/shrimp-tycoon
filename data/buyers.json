@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "description": "买家数据库（Demo 示例数据）",
+  "buyers": [
+    {
+      "id": "B001",
+      "name": "武汉新发展水产",
+      "region": "武汉",
+      "type": "批发商",
+      "rating": 4.8,
+      "monthly_volume_kg": 50000,
+      "preferred_grade": "large",
+      "price_range": {"min": 25.0, "max": 28.0},
+      "contact": "张经理",
+      "tags": ["稳定", "大量", "核心客户"]
+    },
+    {
+      "id": "B002",
+      "name": "长沙海鲜汇",
+      "region": "长沙",
+      "type": "餐饮连锁",
+      "rating": 4.5,
+      "monthly_volume_kg": 20000,
+      "preferred_grade": "medium",
+      "price_range": {"min": 22.0, "max": 26.0},
+      "contact": "李总",
+      "tags": ["餐饮", "稳定"]
+    },
+    {
+      "id": "B003",
+      "name": "盱眙龙虾供应链",
+      "region": "盱眙",
+      "type": "加工厂",
+      "rating": 4.6,
+      "monthly_volume_kg": 100000,
+      "preferred_grade": "medium",
+      "price_range": {"min": 20.0, "max": 24.0},
+      "contact": "王总",
+      "tags": ["大量", "加工", "季节性"]
+    },
+    {
+      "id": "B004",
+      "name": "深圳鲜到家",
+      "region": "深圳",
+      "type": "电商平台",
+      "rating": 4.3,
+      "monthly_volume_kg": 10000,
+      "preferred_grade": "large",
+      "price_range": {"min": 28.0, "max": 35.0},
+      "contact": "陈经理",
+      "tags": ["高端", "电商", "冷链"]
+    },
+    {
+      "id": "B005",
+      "name": "潜江老字号龙虾城",
+      "region": "潜江",
+      "type": "餐饮",
+      "rating": 4.7,
+      "monthly_volume_kg": 8000,
+      "preferred_grade": "large",
+      "price_range": {"min": 26.0, "max": 30.0},
+      "contact": "刘老板",
+      "tags": ["本地", "品质", "老客户"]
+    }
+  ]
+}
