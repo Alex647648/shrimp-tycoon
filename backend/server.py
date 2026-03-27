@@ -59,6 +59,18 @@ async def api_status():
     return {"status": "ok", "agent_ready": True, "orchestrator": True}
 
 
+@app.get("/api/health")
+async def api_health():
+    """系统健康检查（含三 Agent 状态 + 运行统计）。"""
+    return orchestrator.health_check()
+
+
+@app.get("/api/health/summary")
+async def api_health_summary():
+    """人可读状态摘要。"""
+    return {"summary": orchestrator.status_summary()}
+
+
 @app.post("/api/strategist/run")
 async def api_strategist_run(pond_id: str = "A1", date: str = None):
     """手动触发 Strategist 日报。"""

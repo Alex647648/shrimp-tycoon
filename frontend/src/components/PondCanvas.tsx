@@ -1,0 +1,399 @@
+import { useRef, useEffect, useCallback } from 'react';
+
+interface PondCanvasProps {
+  riskLevel: number;
+  deadShrimp: boolean;
+  moltPeak: boolean;
+}
+
+const WATER_COLORS: Record<number, [string, string]> = {
+  1: ['hsl(195,80%,18%)', 'hsl(200,60%,8%)'],
+  2: ['hsl(195,70%,14%)', 'hsl(200,50%,6%)'],
+  3: ['hsl(40,55%,14%)',  'hsl(35,40%,6%)'],
+  4: ['hsl(10,60%,14%)',  'hsl(5,50%,6%)'],
+  5: ['hsl(0,70%,11%)',   'hsl(0,60%,5%)'],
+};
+
+interface Shrimp {
+  x: number; y: number;
+  vx: number; vy: number;
+  size: number; phase: number; baseY: number;
+  legPhase: number;
+}
+
+interface Bubble {
+  x: number; y: number;
+  r: number; speed: number; wobble: number;
+}
+
+function createShrimps(count: number, w: number, h: number): Shrimp[] {
+  return Array.from({ length: count }, () => {
+    const y = h * 0.38 + Math.random() * h * 0.50;
+    return {
+      x: Math.random() * w, y,
+      vx: (Math.random() - 0.5) * 0.7,
+      vy: (Math.random() - 0.5) * 0.2,
+      size: 7 + Math.random() * 6,
+      phase: Math.random() * Math.PI * 2,
+      baseY: y, legPhase: Math.random() * Math.PI * 2,
+    };
+  });
+}
+
+function createBubbles(count: number, w: number, h: number): Bubble[] {
+  return Array.from({ length: count }, () => ({
+    x: Math.random() * w,
+    y: h * 0.5 + Math.random() * h * 0.5,
+    r: 1 + Math.random() * 2.5,
+    speed: 0.25 + Math.random() * 0.6,
+    wobble: Math.random() * Math.PI * 2,
+  }));
+}
+
+/** 像素风小龙虾 */
+function drawShrimp(
+  ctx: CanvasRenderingContext2D,
+  s: Shrimp, t: number, dead: boolean,
+) {
+  ctx.save();
+  ctx.translate(s.x, s.y);
+  const facing = s.vx >= 0 ? 1 : -1;
+  ctx.scale(facing * s.size * 0.11, s.size * 0.11);
+
+  const swimAngle = Math.sin(t * 2.5 + s.phase) * 6; // body undulation degrees
+  const alpha = dead ? 0.45 : 0.82;
+
+  // --- colors ---
+  const shellBase  = dead ? `rgba(180,175,170,${alpha})` : `rgba(220,90,50,${alpha})`;
+  const shellDark  = dead ? `rgba(140,135,130,${alpha})` : `rgba(170,50,20,${alpha})`;
+  const shellLight = dead ? `rgba(210,205,200,${alpha})` : `rgba(255,140,80,${alpha})`;
+  const eyeCol     = dead ? 'rgba(120,120,120,0.7)' : 'rgba(20,10,5,0.95)';
+  const legCol     = dead ? 'rgba(160,155,150,0.5)' : `rgba(200,80,40,${alpha * 0.7})`;
+  const antennaCol = dead ? 'rgba(170,165,160,0.4)' : `rgba(230,120,60,${alpha * 0.55})`;
+
+  ctx.lineJoin = 'round';
+  ctx.lineCap  = 'round';
+
+  // ── TAIL FAN (uropods) ── drawn first so body overlaps
+  const tailFanParts = [-22, -13, -4, 5, 14];
+  tailFanParts.forEach((ang, i) => {
+    const fanLen = i === 2 ? 18 : 14;
+    const fanW   = i === 2 ? 6 : 5;
+    ctx.save();
+    ctx.translate(-38, swimAngle * 0.4);
+    ctx.rotate((ang * Math.PI) / 180);
+    ctx.beginPath();
+    ctx.ellipse(0, -fanLen / 2, fanW / 2, fanLen / 2, 0, 0, Math.PI * 2);
+    ctx.fillStyle = i % 2 === 0 ? shellDark : shellBase;
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // ── ABDOMEN segments (6 segments, each slightly rotated = curved body) ──
+  const segCount = 6;
+  const segW = [12, 11, 10, 9, 8, 7];
+  const segH = [8,  8,  7,  7,  6,  6];
+  let segX = -26;
+  let cumAngle = 0;
+  for (let i = 0; i < segCount; i++) {
+    const bend = swimAngle * 0.08 + (i > 2 ? (i - 2) * 1.2 : 0);
+    cumAngle += bend;
+    ctx.save();
+    ctx.translate(segX, cumAngle * 0.6);
+    ctx.rotate((cumAngle * Math.PI) / 180);
+    // segment body
+    ctx.beginPath();
+    ctx.ellipse(0, 0, segW[i] / 2, segH[i] / 2, 0, 0, Math.PI * 2);
+    ctx.fillStyle = i % 2 === 0 ? shellBase : shellDark;
+    ctx.fill();
+    // segment ridge line
+    ctx.beginPath();
+    ctx.moveTo(-segW[i] / 2 + 1, -1);
+    ctx.lineTo(segW[i] / 2 - 1, -1);
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // swimmerets (pleopods) - tiny appendages
+    if (i > 0 && i < 5) {
+      ctx.beginPath();
+      ctx.moveTo(0, segH[i] / 2);
+      ctx.lineTo(-3 + Math.sin(t * 4 + s.legPhase + i) * 2, segH[i] / 2 + 5);
+      ctx.strokeStyle = legCol;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+    ctx.restore();
+    segX += segW[i] * 0.75;
+  }
+
+  // ── CARAPACE (cephalothorax, the big shell covering head+thorax) ──
+  ctx.save();
+  ctx.translate(18, swimAngle * 0.05);
+  // main carapace body
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 16, 10, 0, 0, Math.PI * 2);
+  ctx.fillStyle = shellBase;
+  ctx.fill();
+  // carapace highlight stripe
+  ctx.beginPath();
+  ctx.ellipse(2, -2, 10, 5, -0.2, 0, Math.PI * 2);
+  ctx.fillStyle = shellLight;
+  ctx.globalAlpha = 0.25;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  // carapace dark edge
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 16, 10, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = shellDark;
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.restore();
+
+  // ── WALKING LEGS (5 pairs, below carapace) ──
+  for (let i = 0; i < 5; i++) {
+    const legX = 8 + i * (-3.5);
+    const swing = Math.sin(t * 3 + s.legPhase + i * 0.9) * 3;
+    ctx.beginPath();
+    ctx.moveTo(legX, 8);
+    ctx.lineTo(legX - 2 + swing, 15);
+    ctx.lineTo(legX - 1 + swing, 20);
+    ctx.strokeStyle = legCol;
+    ctx.lineWidth = 1.3;
+    ctx.stroke();
+    // claw on front 2 pairs
+    if (i < 2) {
+      ctx.beginPath();
+      ctx.arc(legX - 1 + swing, 20, 2, 0, Math.PI * 2);
+      ctx.fillStyle = shellDark;
+      ctx.fill();
+    }
+  }
+
+  // ── HEAD ──
+  ctx.save();
+  ctx.translate(31, swimAngle * 0.05);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 9, 8, 0, 0, Math.PI * 2);
+  ctx.fillStyle = shellBase;
+  ctx.fill();
+  ctx.strokeStyle = shellDark;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
+
+  // ── ROSTRUM (pointed spike on top of head) ──
+  ctx.save();
+  ctx.translate(34, swimAngle * 0.04 - 4);
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(14, -3);
+  ctx.lineTo(0, -1);
+  ctx.closePath();
+  ctx.fillStyle = shellDark;
+  ctx.fill();
+  ctx.restore();
+
+  // ── EYES (stalked) ──
+  const eyeSwing = Math.sin(t * 0.8 + s.phase) * 1;
+  ctx.save();
+  ctx.translate(37, swimAngle * 0.04 - 2 + eyeSwing);
+  // stalk
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(4, -4);
+  ctx.strokeStyle = shellDark; ctx.lineWidth = 1.2; ctx.stroke();
+  // eyeball
+  ctx.beginPath();
+  ctx.arc(4, -4, 2.8, 0, Math.PI * 2);
+  ctx.fillStyle = eyeCol; ctx.fill();
+  ctx.beginPath();
+  ctx.arc(5, -5, 1, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fill();
+  ctx.restore();
+
+  // ── ANTENNAE ──
+  const ant1Sway = Math.sin(t * 1.8 + s.phase) * 4;
+  const ant2Sway = Math.sin(t * 1.8 + s.phase + 0.5) * 3;
+  ctx.beginPath();
+  ctx.moveTo(38, swimAngle * 0.04 - 3);
+  ctx.quadraticCurveTo(52, -18 + ant1Sway, 72, -12 + ant1Sway);
+  ctx.strokeStyle = antennaCol; ctx.lineWidth = 0.9; ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(38, swimAngle * 0.04 - 1);
+  ctx.quadraticCurveTo(54, -8 + ant2Sway, 76, -2 + ant2Sway);
+  ctx.strokeStyle = antennaCol; ctx.lineWidth = 0.7; ctx.stroke();
+
+  // short antennules
+  ctx.beginPath();
+  ctx.moveTo(38, swimAngle * 0.04);
+  ctx.lineTo(46, -6 + ant2Sway * 0.5);
+  ctx.lineTo(50, -4 + ant2Sway * 0.3);
+  ctx.strokeStyle = antennaCol; ctx.lineWidth = 0.8; ctx.stroke();
+
+  ctx.restore();
+}
+
+export default function PondCanvas({ riskLevel, deadShrimp, moltPeak }: PondCanvasProps) {
+  const canvasRef   = useRef<HTMLCanvasElement>(null);
+  const shrimpsRef  = useRef<Shrimp[]>([]);
+  const bubblesRef  = useRef<Bubble[]>([]);
+  const animRef     = useRef<number>(0);
+
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const w = canvas.width;
+    const h = canvas.height;
+    const t = performance.now() / 1000;
+
+    if (shrimpsRef.current.length === 0) {
+      shrimpsRef.current = createShrimps(moltPeak ? 90 : 120, w, h);
+      bubblesRef.current = createBubbles(22, w, h);
+    }
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Sky / surface
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.28);
+    skyGrad.addColorStop(0, 'hsl(220,30%,7%)');
+    skyGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, w, h * 0.28);
+
+    // Water body
+    const [wc1, wc2] = WATER_COLORS[riskLevel] || WATER_COLORS[1];
+    const waterGrad = ctx.createLinearGradient(0, h * 0.18, 0, h);
+    waterGrad.addColorStop(0, 'transparent');
+    waterGrad.addColorStop(0.12, wc1);
+    waterGrad.addColorStop(1, wc2);
+    ctx.fillStyle = waterGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Tyndall light shafts
+    ctx.save();
+    ctx.globalAlpha = 0.03;
+    for (let i = 0; i < 5; i++) {
+      const lx = w * 0.1 + i * (w * 0.18) + Math.sin(t * 0.3 + i) * 20;
+      const shaft = ctx.createLinearGradient(lx, h * 0.2, lx + 30, h * 0.85);
+      shaft.addColorStop(0, 'rgba(180,220,255,0.9)');
+      shaft.addColorStop(1, 'transparent');
+      ctx.fillStyle = shaft;
+      ctx.beginPath();
+      ctx.moveTo(lx, h * 0.2);
+      ctx.lineTo(lx + 35, h * 0.85);
+      ctx.lineTo(lx + 55, h * 0.85);
+      ctx.lineTo(lx + 20, h * 0.2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Water surface caustics
+    ctx.save();
+    ctx.globalAlpha = 0.055;
+    for (let i = 0; i < w; i += 3) {
+      const y = h * 0.23 + Math.sin(t * 1.4 + i * 0.018) * 5;
+      ctx.beginPath();
+      ctx.moveTo(i, y);
+      ctx.lineTo(i, y + 35 + Math.sin(t + i * 0.05) * 12);
+      ctx.strokeStyle = '#aee';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Bottom mud gradient
+    const mudGrad = ctx.createLinearGradient(0, h * 0.82, 0, h);
+    mudGrad.addColorStop(0, 'transparent');
+    mudGrad.addColorStop(1, 'rgba(50,32,16,0.5)');
+    ctx.fillStyle = mudGrad;
+    ctx.fillRect(0, h * 0.82, w, h * 0.18);
+
+    // Bubbles
+    bubblesRef.current.forEach((b) => {
+      b.y -= b.speed;
+      b.x += Math.sin(t * 2 + b.wobble) * 0.25;
+      if (b.y < h * 0.22) {
+        b.y = h * 0.82 + Math.random() * h * 0.1;
+        b.x = Math.random() * w;
+      }
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(200,240,255,${0.04 + b.r * 0.015})`;
+      ctx.fill();
+    });
+
+    // Shrimps
+    const floatUp = riskLevel >= 4;
+    shrimpsRef.current.forEach((s) => {
+      s.phase    += 0.009;
+      s.legPhase += 0.015;
+      s.x += s.vx;
+      s.y += s.vy;
+
+      if (floatUp) {
+        s.vy -= 0.008;
+        if (s.y < h * 0.26) s.vy = Math.abs(s.vy) * 0.4;
+      } else {
+        s.vy += (s.baseY - s.y) * 0.0025;
+      }
+      s.vy = Math.max(-1.2, Math.min(1.2, s.vy));
+      s.vy *= 0.985;
+
+      if (s.x < -60) s.x = w + 60;
+      if (s.x > w + 60) s.x = -60;
+      if (s.y > h * 0.94) { s.vy = -Math.abs(s.vy); s.y = h * 0.94; }
+
+      drawShrimp(ctx, s, t, deadShrimp);
+    });
+
+    // Scan lines
+    ctx.save();
+    ctx.globalAlpha = 0.028;
+    ctx.fillStyle = '#000';
+    for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1);
+    ctx.restore();
+
+    animRef.current = requestAnimationFrame(draw);
+  }, [riskLevel, deadShrimp, moltPeak]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const resize = () => {
+      const rect = canvas.parentElement?.getBoundingClientRect();
+      if (rect) {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width  = rect.width  * dpr;
+        canvas.height = rect.height * dpr;
+        canvas.style.width  = `${rect.width}px`;
+        canvas.style.height = `${rect.height}px`;
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.scale(dpr, dpr);
+        shrimpsRef.current = [];
+      }
+    };
+    resize();
+    window.addEventListener('resize', resize);
+    animRef.current = requestAnimationFrame(draw);
+    return () => {
+      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(animRef.current);
+    };
+  }, [draw]);
+
+  return (
+    <div className="relative w-full h-full">
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            'repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.18) 2px,rgba(0,0,0,0.18) 3px)',
+        }}
+      />
+    </div>
+  );
+}
