@@ -484,6 +484,97 @@ async def audit_log(action: str, result: str, risk_level: int = 1, details: str 
         return json.dumps({"success": False, "error": str(e)})
 
 
+@server.tool()
+async def lead_discover(sources: str = "all", max_per_source: int = 2) -> str:
+    """线索自动发现 — 生成搜索任务清单或处理搜索结果。
+
+    Growth Agent 获客第一步：从 10 个线索来源搜索潜在客户。
+
+    OpenClaw 模式使用方法：
+    1. 调用 lead_discover() → 获取搜索任务清单
+    2. 对每个任务执行 web_search(query)
+    3. 把结果传给 lead_process(results) 提取线索
+    4. 线索自动评分（ICP）并写入 CRM
+
+    10个来源：association/enterprise/catering/social/exhibition/
+              media/wechat/wholesale/gov/referral
+
+    Args:
+        sources: 来源列表（逗号分隔）或 "all"
+        max_per_source: 每个来源最大查询数
+
+    Returns:
+        JSON 搜索任务清单
+    """
+    try:
+        from lead_discovery import LeadDiscovery
+        discovery = LeadDiscovery()
+
+        source_list = None if sources == "all" else sources.split(",")
+        tasks = discovery.get_search_tasks(source_list, max_per_source)
+
+        return json.dumps({
+            "schema": "LEAD-DISCOVER-1.0",
+            "mode": "openclaw",
+            "instruction": "请用 web_search 执行以下每个 query，然后把结果传给 lead_process 工具",
+            "task_count": len(tasks),
+            "tasks": tasks,
+        }, ensure_ascii=False)
+    except Exception as e:
+        logger.warning("lead_discover failed: %s", e)
+        return json.dumps({"error": str(e)})
+
+
+@server.tool()
+async def lead_process(search_results_json: str) -> str:
+    """处理搜索结果，提取线索并写入 CRM。
+
+    接收 web_search 的结果，自动提取企业名称、联系方式、地域、规模，
+    ICP 评分后写入 CRM。
+
+    Args:
+        search_results_json: JSON 数组，每项包含 source/query/text/url
+
+    Returns:
+        JSON 提取结果（含评分和 CRM 写入状态）
+    """
+    try:
+        from lead_discovery import LeadDiscovery, RawLead
+        from crm import CRM
+        from lead_scorer import score_lead
+        from dataclasses import asdict
+
+        results = json.loads(search_results_json)
+        discovery = LeadDiscovery()
+
+        # 提取线索
+        leads = discovery.process_search_results(results)
+
+        # 评分
+        scored = []
+        for lead in leads:
+            lead_dict = asdict(lead)
+            score_result = score_lead(lead_dict)
+            lead_dict.update(score_result)
+            scored.append(lead_dict)
+
+        return json.dumps({
+            "schema": "LEAD-PROCESS-1.0",
+            "extracted": len(leads),
+            "scored": len(scored),
+            "grade_distribution": {
+                "A": sum(1 for s in scored if s.get("grade") == "A"),
+                "B": sum(1 for s in scored if s.get("grade") == "B"),
+                "C": sum(1 for s in scored if s.get("grade") == "C"),
+                "D": sum(1 for s in scored if s.get("grade") == "D"),
+            },
+            "top_leads": sorted(scored, key=lambda x: x.get("score", 0), reverse=True)[:10],
+        }, ensure_ascii=False, default=str)
+    except Exception as e:
+        logger.warning("lead_process failed: %s", e)
+        return json.dumps({"error": str(e)})
+
+
 # ════════════════════════════════════════════════════════════════════
 # 服务启动
 # ════════════════════════════════════════════════════════════════════

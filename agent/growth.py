@@ -200,6 +200,17 @@ class GrowthAgent:
 
         return report
 
+    async def run_lead_discovery(self, crm=None, search_fn=None,
+                                 sources: list[str] = None) -> dict:
+        """线索自动发现（周一 cron 触发）。
+
+        OpenClaw 模式：返回搜索任务清单，Claude 用 web_search 执行
+        独立模式：传入 search_fn，自动搜索+提取+评分+写CRM
+        """
+        from mcp.lead_discovery import LeadDiscovery
+        discovery = LeadDiscovery(crm=crm)
+        return await discovery.run_full_cycle(search_fn=search_fn, sources=sources)
+
     async def run_daily_outreach(self, crm=None) -> dict:
         """每日获客触达（读 CRM → 评分 → 生成触达任务）。"""
         from mcp.lead_scorer import score_lead
