@@ -9,9 +9,16 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
 
+sys_agent = str(Path(__file__).resolve().parent.parent / "agent")
+if sys_agent not in __import__('sys').path:
+    __import__('sys').path.insert(0, sys_agent)
+
 from simulator import PondSimulator, compute_wqar, SCENARIOS
 from sentinel import SentinelAgent
 from feishu import FeishuPusher
+from db import PondDB
+from orchestrator import AgentOrchestrator
+from memory import SentinelMemory
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -35,12 +42,35 @@ app = FastAPI(title="虾塘大亨后端")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 feishu = FeishuPusher()
-sentinel = SentinelAgent(feishu_pusher=feishu)
+db = PondDB()
+memory = SentinelMemory()
+orchestrator = AgentOrchestrator(db=db, feishu_pusher=feishu, memory=memory)
+sentinel = orchestrator.sentinel
+
+
+@app.on_event("startup")
+async def startup():
+    await db.init()
+    logger.info("DB initialized, orchestrator ready")
 
 
 @app.get("/api/status")
 async def api_status():
-    return {"status": "ok", "agent_ready": True}
+    return {"status": "ok", "agent_ready": True, "orchestrator": True}
+
+
+@app.post("/api/strategist/run")
+async def api_strategist_run(pond_id: str = "A1", date: str = None):
+    """手动触发 Strategist 日报。"""
+    report = await orchestrator.run_daily_report(pond_id, date)
+    return {"status": "ok", "report": report}
+
+
+@app.post("/api/growth/run")
+async def api_growth_run(date: str = None):
+    """手动触发 Growth 周报。"""
+    report = await orchestrator.run_weekly_report(date)
+    return {"status": "ok", "report": report}
 
 
 @app.get("/api/price")
