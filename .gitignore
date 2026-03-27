@@ -11,3 +11,14 @@ venv/
 .pytest_cache/
 DEV_CONSTRAINTS.md
 INTERFACE_SPEC.md
+
+# Frontend build output (not needed in repo)
+frontend/dist/
+frontend/node_modules/
+frontend/.vite/
+
+# Python
+__pycache__/
+*.pyc
+backend/__pycache__/
+mcp/__pycache__/
