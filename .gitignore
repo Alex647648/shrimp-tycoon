@@ -11,6 +11,18 @@ venv/
 .pytest_cache/
 DEV_CONSTRAINTS.md
 INTERFACE_SPEC.md
+AGENT_CONSTRAINTS.md
+AGENT_ROADMAP.md
+DEV_PLAN.md
+FRONTEND_SPEC.md
+
+# PPT / 路演文件（本地保留，不进库）
+*.pptx
+scripts/create_pitch_deck.py
+
+# Database files
+*.db
+backend/data/
 
 # Frontend build output (not needed in repo)
 frontend/dist/
