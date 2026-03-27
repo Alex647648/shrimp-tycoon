@@ -228,34 +228,89 @@ async def harvest_advise(sensor: str, wqar: str, market_price: float | None = No
 
 
 @server.tool()
-async def market_match(avg_weight: float, region: str = "湖北") -> str:
-    """市场买家匹配（MMR-1.0）。
-    
+async def market_match(avg_weight: float, count: int = 5000,
+                       survival_rate: float = 0.9,
+                       region: str = "湖北") -> str:
+    """市场买家智能匹配（MMR-2.0）。
+
+    根据虾的规格、产量和地域，从买家数据库中匹配最优买家。
+    匹配维度：规格适配 + 地域物流 + 信誉评分 + 采购量 + 价格区间。
+
     Args:
-        avg_weight: 平均体重（克）
-        region: 地区（默认湖北）
-        
+        avg_weight: 平均体重（克），用于自动分级
+        count: 存活数量
+        survival_rate: 存活率（0-1）
+        region: 养殖地区
+
     Returns:
-        MMR-1.0 JSON
-        {
-            "schema": "MMR-1.0",
-            "grade": "large|medium|small",
-            "price_per_kg": 26.7,
-            "buyer": "武汉新发展水产",
-            ...
-        }
+        MMR-2.0 JSON（含分级、匹配买家 Top5、匹配原因）
     """
     try:
         async with asyncio.timeout(5.0):
-            weight_kg = avg_weight / 1000  # 克转为公斤
-            result = _tool_market_match(weight_kg, region)
-            result["schema"] = "MMR-1.0"
+            from market_engine import match_buyers
+            result = match_buyers(avg_weight, region, count, survival_rate)
             return json.dumps(result, ensure_ascii=False)
     except asyncio.TimeoutError:
         logger.error("market_match timeout")
         return json.dumps({"error": "timeout"})
     except Exception as e:
         logger.warning("market_match failed: %s", e)
+        return json.dumps({"error": str(e)})
+
+
+@server.tool()
+async def sell_window() -> str:
+    """最佳出货窗口分析。
+
+    综合判断当前是否该出货：
+    - 7天价格趋势 + 30天趋势
+    - 季节性规律（旺季/淡季）
+    - 综合建议（尽快出货/观望/择机）
+
+    Returns:
+        SELL-WINDOW-1.0 JSON
+    """
+    try:
+        async with asyncio.timeout(5.0):
+            from market_engine import analyze_sell_window
+            result = analyze_sell_window()
+            return json.dumps(result, ensure_ascii=False)
+    except asyncio.TimeoutError:
+        return json.dumps({"error": "timeout"})
+    except Exception as e:
+        logger.warning("sell_window failed: %s", e)
+        return json.dumps({"error": str(e)})
+
+
+@server.tool()
+async def market_report(avg_weight: float, count: int = 5000,
+                        survival_rate: float = 0.9,
+                        region: str = "湖北") -> str:
+    """一站式市场撮合报告。
+
+    综合所有市场信息，生成完整出货方案：
+    分级 → 买家匹配 → 出货窗口 → 收益预估 → 行动计划
+
+    用于回答用户问题如"现在该卖吗"、"帮我找买家"、"预计能卖多少钱"。
+
+    Args:
+        avg_weight: 平均体重（克）
+        count: 存活数量
+        survival_rate: 存活率
+        region: 养殖地区
+
+    Returns:
+        MARKET-REPORT-1.0 JSON（含一句话总结 + 买家 + 出货建议 + 行动计划）
+    """
+    try:
+        async with asyncio.timeout(5.0):
+            from market_engine import full_market_report
+            result = full_market_report(avg_weight, count, survival_rate, region)
+            return json.dumps(result, ensure_ascii=False, default=str)
+    except asyncio.TimeoutError:
+        return json.dumps({"error": "timeout"})
+    except Exception as e:
+        logger.warning("market_report failed: %s", e)
         return json.dumps({"error": str(e)})
 
 
