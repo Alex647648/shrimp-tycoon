@@ -1,0 +1,281 @@
+{
+  "metadata": {
+    "generated_at": "2026-03-26T22:12:54.258590",
+    "data_source": "industry_based_estimation",
+    "basis": "2025年同期数据 + 行业价格规律 + 季节性因素",
+    "period": "2026-03-01 至 2026-03-26",
+    "unit": "元/公斤",
+    "confidence": "趋势高可信度，绝对值中等可信度",
+    "notes": "基于行业规律和季节性因素估计，非实时交易数据"
+  },
+  "daily_prices": [
+    {
+      "date": "2026-03-01",
+      "large": 28.0,
+      "medium": 22.0,
+      "small": 16.0,
+      "source": "开市平稳期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-02",
+      "large": 27.7,
+      "medium": 21.8,
+      "small": 15.8,
+      "source": "开市平稳期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-03",
+      "large": 27.4,
+      "medium": 21.6,
+      "small": 15.7,
+      "source": "开市平稳期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-04",
+      "large": 27.2,
+      "medium": 21.3,
+      "small": 15.5,
+      "source": "开市平稳期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-05",
+      "large": 26.9,
+      "medium": 21.1,
+      "small": 15.4,
+      "source": "开市平稳期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-06",
+      "large": 26.6,
+      "medium": 20.9,
+      "small": 15.2,
+      "source": "早虾上市期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-07",
+      "large": 26.2,
+      "medium": 20.6,
+      "small": 15.0,
+      "source": "早虾上市期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-08",
+      "large": 25.8,
+      "medium": 20.2,
+      "small": 14.7,
+      "source": "早虾上市期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-09",
+      "large": 25.3,
+      "medium": 19.9,
+      "small": 14.5,
+      "source": "早虾上市期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-10",
+      "large": 24.9,
+      "medium": 19.6,
+      "small": 14.2,
+      "source": "早虾上市期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-11",
+      "large": 24.5,
+      "medium": 19.2,
+      "small": 14.0,
+      "source": "早虾上市期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-12",
+      "large": 24.1,
+      "medium": 18.9,
+      "small": 13.8,
+      "source": "早虾上市期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-13",
+      "large": 23.7,
+      "medium": 18.6,
+      "small": 13.5,
+      "source": "早虾上市期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-14",
+      "large": 23.2,
+      "medium": 18.3,
+      "small": 13.3,
+      "source": "早虾上市期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-15",
+      "large": 22.8,
+      "medium": 17.9,
+      "small": 13.0,
+      "source": "早虾上市期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-16",
+      "large": 22.4,
+      "medium": 17.6,
+      "small": 12.8,
+      "source": "供应高峰期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-17",
+      "large": 22.1,
+      "medium": 17.3,
+      "small": 12.6,
+      "source": "供应高峰期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-18",
+      "large": 21.7,
+      "medium": 17.1,
+      "small": 12.4,
+      "source": "供应高峰期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-19",
+      "large": 21.4,
+      "medium": 16.8,
+      "small": 12.2,
+      "source": "供应高峰期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-20",
+      "large": 21.1,
+      "medium": 16.5,
+      "small": 12.0,
+      "source": "供应高峰期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-21",
+      "large": 20.7,
+      "medium": 16.3,
+      "small": 11.8,
+      "source": "供应高峰期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-22",
+      "large": 20.4,
+      "medium": 16.0,
+      "small": 11.6,
+      "source": "供应高峰期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-23",
+      "large": 20.0,
+      "medium": 15.8,
+      "small": 11.5,
+      "source": "供应高峰期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-24",
+      "large": 19.7,
+      "medium": 15.5,
+      "small": 11.3,
+      "source": "供应高峰期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-25",
+      "large": 19.4,
+      "medium": 15.2,
+      "small": 11.1,
+      "source": "供应高峰期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    {
+      "date": "2026-03-26",
+      "large": 19.0,
+      "medium": 15.0,
+      "small": 10.9,
+      "source": "供应高峰期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    }
+  ],
+  "current_price": {
+    "date": "2026-03-26",
+    "large": 19.0,
+    "medium": 15.0,
+    "small": 10.9,
+    "source": "供应高峰期",
+    "data_quality": "industry_based_estimate",
+    "confidence": "high_for_trend_medium_for_absolute"
+  },
+  "summary": {
+    "month_high": {
+      "date": "2026-03-01",
+      "large": 28.0,
+      "medium": 22.0,
+      "small": 16.0,
+      "source": "开市平稳期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    "month_low": {
+      "date": "2026-03-26",
+      "large": 19.0,
+      "medium": 15.0,
+      "small": 10.9,
+      "source": "供应高峰期",
+      "data_quality": "industry_based_estimate",
+      "confidence": "high_for_trend_medium_for_absolute"
+    },
+    "avg_price": {
+      "large": 23.5,
+      "medium": 18.5,
+      "small": 13.5
+    }
+  }
+}
