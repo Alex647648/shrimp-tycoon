@@ -24,10 +24,13 @@ scripts/create_pitch_deck.py
 *.db
 backend/data/
 
-# Frontend build output (not needed in repo)
+# Frontend
 frontend/dist/
 frontend/node_modules/
 frontend/.vite/
+frontend/package-lock.json
+frontend/eslint.config.js
+frontend/README.md
 
 # Python
 __pycache__/
