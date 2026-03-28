@@ -22,7 +22,7 @@ nano .env            # 填入 API Key
 ```
 
 安装完成后，你获得：
-- ✅ **14 个 MCP 工具** 注册到 Claude（水质评分、投喂建议、病害评估……）
+- ✅ **16 个 MCP 工具** 注册到 Claude（水质评分、投喂建议、病害评估、市场撮合……）
 - ✅ **知识库** 加载完毕（70 条养殖规则 + 54 篇学术参考）
 - ✅ **3 个定时任务** 自动运行（日报/周报/获客）
 - ✅ **SQLite 数据库** 初始化（传感器 + 决策 + 日报三张表）
@@ -341,7 +341,7 @@ AI 综合分析，告诉你"现在该不该卖"：
 ```
 你说一句话
     ↓
-OpenClaw（Claude + 14 个 MCP 工具 + 知识库）
+OpenClaw（Claude + 16 个 MCP 工具 + 知识库）
     ↓                    ↓                    ↓
   🛡️ 哨兵              📊 策略              📈 增长
   实时监控              每日日报              获客+ROI
@@ -351,6 +351,29 @@ OpenClaw（Claude + 14 个 MCP 工具 + 知识库）
 ```
 
 **数据单向流动：** 传感器 → 哨兵 → 数据库 → 策略 → 飞书 / 增长 → CRM
+
+### 16 个 MCP 工具一览
+
+| # | 工具 | 功能 | 所属 Agent | Schema |
+|---|------|------|-----------|--------|
+| 1 | `sensor_read` | 读取虾塘传感器数据 | Sentinel | SDP-1.0 |
+| 2 | `water_quality_score` | 水质综合评分（加权 CSI） | Sentinel | WQAR-1.0 |
+| 3 | `feeding_recommend` | 投喂建议（量/时间/停食） | Sentinel | DFP-1.0 |
+| 4 | `disease_assess` | 病害评估（风险/疑似/处置） | Sentinel | DRAR-1.0 |
+| 5 | `harvest_advise` | 捕捞建议（时机/收益预估） | Sentinel | HDR-1.0 |
+| 6 | `kb_query` | 知识库检索（70 条规则） | 全 Agent | KB-1.0 |
+| 7 | `price_trend` | 价格趋势查询（N 天） | Strategist | — |
+| 8 | `market_match` | 买家智能匹配（MMR-2.0） | Growth | MMR-2.0 |
+| 9 | `sell_window` | 最佳出货窗口分析 | Strategist | SELL-WINDOW-1.0 |
+| 10 | `market_report` | 一站式市场撮合报告 | Growth | MARKET-REPORT-1.0 |
+| 11 | `lead_score` | 客户 ICP 评分（100 分制） | Growth | LEAD-1.0 |
+| 12 | `lead_discover` | 线索自动发现（10 个来源） | Growth | LEAD-DISCOVER-1.0 |
+| 13 | `lead_process` | 线索处理（提取+评分+入库） | Growth | LEAD-PROCESS-1.0 |
+| 14 | `crm_write` | CRM 写入（客户生命周期） | Growth | — |
+| 15 | `feishu_push` | 飞书推送（告警卡片） | 全 Agent | — |
+| 16 | `audit_log` | 审计日志（合规留痕） | 全 Agent | — |
+
+**工具约束：** 所有工具 ≤5s 超时 · 无状态幂等 · 错误不扩散 · Agent 间权限隔离
 
 ---
 
@@ -377,10 +400,11 @@ shrimp-tycoon/
 │   ├── simulator.py            # 仿真引擎（5 个演示场景）
 │   └── feishu.py               # 飞书推送
 │
-├── mcp/                        # 工具层（14 个 MCP 工具）
-│   ├── server.py               # FastMCP Server
+├── mcp/                        # 工具层（16 个 MCP 工具）
+│   ├── server.py               # FastMCP Server（16 个工具注册）
+│   ├── core.py                 # 核心工具函数（无外部依赖，可独立测试）
 │   ├── kb_searcher.py          # 知识库检索引擎
-│   ├── market_engine.py         # 市场撮合引擎（分级+匹配+出货窗口）
+│   ├── market_engine.py        # 市场撮合引擎（分级+匹配+出货窗口）
 │   ├── lead_discovery.py       # 线索自动发现（10 个来源）
 │   ├── lead_scorer.py          # ICP 评分模型
 │   ├── crm.py                  # CRM 读写
@@ -399,7 +423,7 @@ shrimp-tycoon/
 │   └── buyers.json             # 买家数据库
 │
 ├── frontend/                   # 可视化仪表盘（React）
-├── tests/                      # 32 个测试用例（全绿）
+├── tests/                      # 63 个测试用例（全绿）
 ├── docker-compose.yml          # 产品版部署
 └── scripts/create_pitch_deck.py
 ```
@@ -433,7 +457,7 @@ shrimp-tycoon/
 ## 🧪 验证
 
 ```bash
-# 32 个测试用例
+# 63 个测试用例
 python -m pytest tests/ -v
 
 # 启动后端
