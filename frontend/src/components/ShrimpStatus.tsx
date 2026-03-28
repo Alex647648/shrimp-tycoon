@@ -1,86 +1,67 @@
-import type { SensorData, WQARData } from '../types/api';
+
+import React from 'react';
+import { ShrimpData } from '../types';
 
 interface ShrimpStatusProps {
-  sensor: SensorData;
-  wqar: WQARData;
+  data: ShrimpData | null;
+  csiScore: number;
 }
 
-const TARGET_WEIGHT = 40; // grams, market size
-
-export default function ShrimpStatus({ sensor, wqar }: ShrimpStatusProps) {
-  const survivalRate = ((sensor.count / 500) * 100).toFixed(1);
-  const growthProgress = Math.min((sensor.avg_weight / TARGET_WEIGHT) * 100, 100);
-  const csiPercent = Math.min(wqar.csi, 100);
+export const ShrimpStatus: React.FC<ShrimpStatusProps> = ({ data, csiScore }) => {
+  if (!data) return null;
 
   return (
-    <div className="liquid-glass rounded-2xl p-4 space-y-3">
-      <h3 className="text-xs text-white/50 font-medium tracking-wider uppercase">
-        虾群状态
-      </h3>
-
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <div>
-          <span className="text-white/40 text-xs">存活数量</span>
-          <p className="font-mono font-bold">{sensor.count} 尾</p>
-        </div>
-        <div>
-          <span className="text-white/40 text-xs">存活率</span>
-          <p className="font-mono font-bold">{survivalRate}%</p>
-        </div>
-        <div>
-          <span className="text-white/40 text-xs">均重</span>
-          <p className="font-mono font-bold">{sensor.avg_weight.toFixed(1)}g</p>
-        </div>
-        <div>
-          <span className="text-white/40 text-xs">距上市规格</span>
-          <p className="font-mono font-bold">
-            {(TARGET_WEIGHT - sensor.avg_weight).toFixed(1)}g
-          </p>
+    <div className="liquid-glass p-10 rounded-[2rem] space-y-10 border border-slate-100 bg-white group">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">生物资产状态协议</h3>
+        <div className="flex items-center gap-4">
+          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">健康指数 (CSI)</span>
+          <span className={`text-2xl font-black ${csiScore > 80 ? 'text-highlight' : 'text-orange-500'}`}>{csiScore}</span>
         </div>
       </div>
 
-      {/* Growth progress */}
-      <div>
-        <div className="flex justify-between text-[10px] text-white/40 mb-1">
-          <span>生长进度</span>
-          <span>{growthProgress.toFixed(0)}%</span>
+      <div className="grid grid-cols-2 gap-x-12 gap-y-10">
+        <div className="space-y-2">
+          <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">种群数量估算</div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl font-black text-slate-900 tracking-tighter">{data.count}</span>
+            <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">尾</span>
+          </div>
         </div>
-        <div className="h-2 rounded-full bg-white/5 overflow-hidden">
-          <div
-            className="h-full rounded-full relative"
-            style={{
-              width: `${growthProgress}%`,
-              background: 'linear-gradient(90deg, #06b6d4, #10b981)',
-            }}
-          >
-            <div className="absolute right-0 top-0 w-2 h-full bg-white/40 rounded-full blur-sm" />
+        <div className="space-y-2">
+          <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">当前成活率</div>
+          <div className="text-4xl font-black text-highlight tracking-tighter">{data.survival_rate}%</div>
+        </div>
+        <div className="space-y-2">
+          <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">平均单体重量</div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl font-black text-slate-900 tracking-tighter">{data.avg_weight}</span>
+            <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">G</span>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">距收获目标</div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl font-black text-slate-900 tracking-tighter">{data.target_weight_diff}</span>
+            <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">G</span>
           </div>
         </div>
       </div>
 
-      {/* CSI score */}
-      <div>
-        <div className="flex justify-between text-[10px] text-white/40 mb-1">
-          <span>CSI 水质综合评分</span>
-          <span>{wqar.csi}</span>
-        </div>
-        <div className="h-2 rounded-full bg-white/5 overflow-hidden">
-          <div
-            className="h-full rounded-full relative"
-            style={{
-              width: `${csiPercent}%`,
-              background:
-                wqar.risk_level <= 2
-                  ? 'linear-gradient(90deg, #10b981, #06b6d4)'
-                  : wqar.risk_level <= 3
-                    ? 'linear-gradient(90deg, #f59e0b, #eab308)'
-                    : 'linear-gradient(90deg, #ef4444, #f97316)',
-            }}
-          >
-            <div className="absolute right-0 top-0 w-2 h-full bg-white/40 rounded-full blur-sm" />
+      <div className="space-y-6 pt-10 border-t border-slate-50">
+        <div>
+          <div className="flex justify-between text-[10px] font-bold mb-4">
+            <span className="text-slate-400 uppercase tracking-widest">生长周期进度</span>
+            <span className="text-slate-900 font-black">{data.growth_progress}%</span>
+          </div>
+          <div className="h-2 bg-slate-50 rounded-full overflow-hidden relative border border-slate-100">
+            <div 
+              className="h-full bg-highlight transition-all duration-1000 ease-out" 
+              style={{ width: `${data.growth_progress}%` }} 
+            />
           </div>
         </div>
       </div>
     </div>
   );
-}
+};

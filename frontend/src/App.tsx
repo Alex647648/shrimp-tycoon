@@ -1,300 +1,232 @@
-import { useCallback } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import Header from './components/Header';
-import PondCanvas from './components/PondCanvas';
-import MetricCard from './components/MetricCard';
-import ShrimpStatus from './components/ShrimpStatus';
-import AIDecision from './components/AIDecision';
-import FeishuPreview from './components/FeishuPreview';
-import EventButtons from './components/EventButtons';
-import ROICard from './components/ROICard';
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState, useEffect } from 'react';
+import { Shrimp, Zap, AlertCircle, Menu, Settings, Bell, Twitter, Linkedin, Instagram } from 'lucide-react';
+import { motion } from 'motion/react';
 import { useWebSocket } from './hooks/useWebSocket';
-import { useShrimpData } from './hooks/useShrimpData';
+import { MarketData, ShrimpData, ROIData } from './types';
+import { PondCanvas } from './components/PondCanvas';
+import { AIDecision } from './components/AIDecision';
+import { MetricCard } from './components/MetricCard';
+import { ShrimpStatus } from './components/ShrimpStatus';
+import { ROICard } from './components/ROICard';
+import { EventButtons } from './components/EventButtons';
+import { FeishuPreview } from './components/FeishuPreview';
 
-const METRIC_CONFIG = [
-  { key: 'temp', label: '水温', unit: '°C' },
-  { key: 'DO', label: '溶解氧', unit: 'mg/L' },
-  { key: 'pH', label: 'pH值', unit: '' },
-  { key: 'ammonia', label: '氨氮', unit: 'mg/L' },
-];
+export default function App() {
+  const {
+    sensorData,
+    wqarData,
+    alert,
+    decision,
+    feishuSent,
+    speed,
+    triggerScenario,
+    changeSpeed
+  } = useWebSocket();
 
-const MOCK_DECISIONS: Record<string, import('./types/api').DecisionReport> = {
-  do_drop: {
-    schema: 'DECISION-1.0',
-    risk_level: 4,
-    risk_label: '高风险',
-    model_used: 'deepseek-r1',
-    latency_ms: 2340,
-    confidence: 0.87,
-    summary: '凌晨溶解氧骤降至2.1mg/L，已低于安全阈值，虾群出现浮头现象，需立即干预。',
-    actions: ['立即开启增氧机至最大功率', '减少当日投饵量50%', '检查水源进排水系统'],
-    feeding: { total_ratio: 1.5, morning: null, evening: null, skip: false },
-    disease: { risk: 'high', diseases: [], herb_formula: null, alert: true },
-    harvest: { recommended: false, days_to_target: 25, current_price: 26.7, price_trend: 'stable', expected_revenue: 34600 },
-    feishu_sent: true,
-    feishu_message_id: 'mock-001',
-  },
-  wssv: {
-    schema: 'DECISION-1.0',
-    risk_level: 5,
-    risk_label: '极高风险',
-    model_used: 'deepseek-r1',
-    latency_ms: 3120,
-    confidence: 0.92,
-    summary: '检测到疑似白斑综合征病毒(WSSV)感染迹象，多只虾体表出现白色斑点，需紧急隔离处理。',
-    actions: ['立即隔离病虾，设置隔离区', '全池泼洒聚维酮碘消毒', '联系水产兽医进行PCR确诊'],
-    feeding: { total_ratio: 0, morning: null, evening: null, skip: true },
-    disease: { risk: 'critical', diseases: ['WSSV'], herb_formula: '板蓝根+大黄复方', alert: true },
-    harvest: { recommended: false, days_to_target: 25, current_price: 26.7, price_trend: 'down', expected_revenue: 18200 },
-    feishu_sent: true,
-    feishu_message_id: 'mock-002',
-  },
-  storm: {
-    schema: 'DECISION-1.0',
-    risk_level: 3,
-    risk_label: '中等风险',
-    model_used: 'deepseek-r1',
-    latency_ms: 1890,
-    confidence: 0.78,
-    summary: '暴雨导致水质突变，pH下降、浊度升高，需加强水质监测和应急处理。',
-    actions: ['加大换水量，引入新鲜水源', '泼洒生石灰调节pH', '密切监测未来24小时水质变化'],
-    feeding: { total_ratio: 2, morning: null, evening: null, skip: false },
-    disease: { risk: 'medium', diseases: [], herb_formula: null, alert: false },
-    harvest: { recommended: false, days_to_target: 25, current_price: 26.7, price_trend: 'stable', expected_revenue: 34600 },
-    feishu_sent: false,
-    feishu_message_id: null,
-  },
-  molt: {
-    schema: 'DECISION-1.0',
-    risk_level: 2,
-    risk_label: '轻微风险',
-    model_used: 'deepseek-r1',
-    latency_ms: 1540,
-    confidence: 0.85,
-    summary: '检测到群体蜕壳高峰期信号，需调整投喂策略并补充矿物质。',
-    actions: ['投喂中添加磷酸二氢钙', '停用当日消毒剂', '夜间加强巡塘观察'],
-    feeding: { total_ratio: 2.5, morning: null, evening: null, skip: false },
-    disease: { risk: 'low', diseases: [], herb_formula: null, alert: false },
-    harvest: { recommended: false, days_to_target: 20, current_price: 26.7, price_trend: 'up', expected_revenue: 36800 },
-    feishu_sent: false,
-    feishu_message_id: null,
-  },
-  harvest: {
-    schema: 'DECISION-1.0',
-    risk_level: 1,
-    risk_label: '低风险',
-    model_used: 'deepseek-r1',
-    latency_ms: 1220,
-    confidence: 0.94,
-    summary: '虾群已达上市规格，当前市场价处于高位，建议把握最佳捕捞窗口。',
-    actions: ['安排72小时内分批捕捞', '提前联系收购商锁定价格', '捕捞前24小时停止投喂'],
-    feeding: { total_ratio: 0, morning: null, evening: null, skip: true },
-    disease: { risk: 'low', diseases: [], herb_formula: null, alert: false },
-    harvest: { recommended: true, days_to_target: 0, current_price: 28.5, price_trend: 'up', expected_revenue: 42000 },
-    feishu_sent: false,
-    feishu_message_id: null,
-  },
-};
-
-const MOCK_ALERTS: Record<string, { level: 'red' | 'amber' | 'green'; title: string; message: string; actions: string[] }> = {
-  do_drop: { level: 'red', title: '🚨 溶解氧骤降告警', message: 'DO值降至2.1mg/L，低于安全阈值3.0mg/L', actions: ['立即开启增氧机', '减少投饵量'] },
-  wssv: { level: 'red', title: '🚨 白斑病毒预警', message: '发现疑似WSSV感染虾只，体表白色斑点', actions: ['隔离病虾', '全池消毒', '联系兽医'] },
-  storm: { level: 'amber', title: '⚠️ 暴雨水质突变', message: '降雨导致pH从7.8降至6.9，浊度升高', actions: ['加大换水', '调节pH'] },
-  molt: { level: 'amber', title: '⚠️ 蜕壳高峰期', message: '群体性蜕壳信号明显，需特殊管理', actions: ['补充矿物质', '减少扰动'] },
-  harvest: { level: 'green', title: '✅ 最佳捕捞时机', message: '虾群达标，市场价高位¥28.5/kg', actions: ['安排捕捞', '联系收购商'] },
-};
-
-const MOCK_SENSORS: Record<string, Partial<import('./types/api').SensorData>> = {
-  do_drop: { DO: 2.1, temp: 24.5 },
-  wssv: { dead_shrimp: true, count: 420 },
-  storm: { pH: 6.9, temp: 23.1, transparency: 15 },
-  molt: { molt_peak: true },
-  harvest: { avg_weight: 41.2, count: 478 },
-};
-
-const MOCK_WQARS: Record<string, Partial<import('./types/api').WQARData>> = {
-  do_drop: { csi: 60, risk_level: 4, risk_label: '高风险', indicators: { temp: { value: 24.5, status: 'normal', label: '正常' }, DO: { value: 2.1, status: 'danger', label: '严重偏低' }, pH: { value: 7.8, status: 'optimal', label: '最佳范围' }, ammonia: { value: 0.18, status: 'caution', label: '接近警戒' } } },
-  wssv: { csi: 80, risk_level: 5, risk_label: '极高风险', indicators: { temp: { value: 25.4, status: 'optimal', label: '最适范围' }, DO: { value: 5.8, status: 'normal', label: '正常' }, pH: { value: 7.6, status: 'optimal', label: '最佳范围' }, ammonia: { value: 0.22, status: 'warning', label: '偏高' } } },
-  storm: { csi: 45, risk_level: 3, risk_label: '中等风险', indicators: { temp: { value: 23.1, status: 'caution', label: '偏低' }, DO: { value: 5.5, status: 'normal', label: '正常' }, pH: { value: 6.9, status: 'warning', label: '偏低' }, ammonia: { value: 0.2, status: 'caution', label: '接近警戒' } } },
-  molt: { csi: 25, risk_level: 2, risk_label: '轻微风险', indicators: { temp: { value: 25.4, status: 'optimal', label: '最适范围' }, DO: { value: 6.0, status: 'normal', label: '正常' }, pH: { value: 7.7, status: 'optimal', label: '最佳范围' }, ammonia: { value: 0.17, status: 'caution', label: '接近警戒' } } },
-  harvest: { csi: 12, risk_level: 1, risk_label: '正常运营', indicators: { temp: { value: 26.0, status: 'optimal', label: '最适范围' }, DO: { value: 6.5, status: 'optimal', label: '充足' }, pH: { value: 7.9, status: 'optimal', label: '最佳范围' }, ammonia: { value: 0.12, status: 'optimal', label: '优良' } } },
-};
-
-function App() {
-  const { state, handleMessage, setSpeed, clearDecision } = useShrimpData();
-  const { connected, send } = useWebSocket(handleMessage);
-
-  const handleTrigger = useCallback(
-    (scenario: string) => {
-      if (scenario === 'reset') {
-        clearDecision();
-        if (connected) {
-          send({ type: 'trigger', scenario: 'reset', push_feishu: false });
-        }
-        // Reset to defaults handled by clearDecision
-        return;
-      }
-
-      if (connected) {
-        send({ type: 'trigger', scenario, push_feishu: true });
-      } else {
-        // Mock mode
-        const mockSensor = MOCK_SENSORS[scenario];
-        const mockWqar = MOCK_WQARS[scenario];
-        const mockDecision = MOCK_DECISIONS[scenario];
-        const mockAlert = MOCK_ALERTS[scenario];
-
-        if (mockSensor) {
-          handleMessage({
-            type: 'tick',
-            sensor: { ...state.sensor, ...mockSensor } as import('./types/api').SensorData,
-            wqar: { ...state.wqar, ...mockWqar } as import('./types/api').WQARData,
-          });
-        }
-        if (mockAlert) {
-          handleMessage({
-            type: 'alert',
-            level: mockAlert.level,
-            data: { scenario, title: mockAlert.title, message: mockAlert.message, actions: mockAlert.actions },
-          });
-        }
-        if (mockDecision) {
-          setTimeout(() => {
-            handleMessage({ type: 'decision_ready', data: mockDecision });
-            if (mockDecision.feishu_sent) {
-              setTimeout(() => {
-                handleMessage({ type: 'feishu_sent', message_id: mockDecision.feishu_message_id || '', level: mockAlert?.level || 'amber' });
-              }, 800);
-            }
-          }, 1500);
-        }
-      }
-    },
-    [connected, send, handleMessage, state.sensor, state.wqar, clearDecision],
-  );
-
-  const handleSpeedChange = useCallback(
-    (speed: number) => {
-      setSpeed(speed);
-      if (connected) {
-        send({ type: 'set_speed', multiplier: speed });
-      }
-    },
-    [connected, send, setSpeed],
-  );
-
-  const handleTriggerAlert = useCallback(() => {
-    handleTrigger('do_drop');
-  }, [handleTrigger]);
-
-  const price = state.decision?.harvest?.current_price ?? 26.7;
-  const indicators = state.wqar.indicators;
+  const [market] = useState<MarketData>({ current_price: 26.7, trend: 'stable' });
+  const [shrimp] = useState<ShrimpData>({
+    count: 485,
+    survival_rate: 97.0,
+    avg_weight: 28.5,
+    target_weight_diff: 11.5,
+    growth_progress: 71
+  });
+  const [roi] = useState<ROIData>({
+    revenue_prediction: 34600,
+    roi_ratio: 2.5,
+    saas_fee: 2000,
+    avoided_loss: 8000
+  });
 
   return (
-    <div className="h-screen flex flex-col bg-black">
-      <Header
-        day={state.sensor.day}
-        speed={state.speed}
-        onSpeedChange={handleSpeedChange}
-        onTriggerAlert={handleTriggerAlert}
-        price={price}
-      />
+    <main className="h-screen w-screen flex flex-col overflow-hidden relative atmosphere grid-pattern">
+      {/* Simplified Background */}
+      <div className="paper-texture" />
+      <div className="water-surface absolute inset-0 bg-gradient-to-br from-sky-300/40 via-blue-200/20 to-sky-400/30 pointer-events-none z-[-3]" />
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Main pond view */}
-        <div className="flex-[65] relative">
-          <PondCanvas
-            riskLevel={state.wqar.risk_level}
-            deadShrimp={state.sensor.dead_shrimp}
-            moltPeak={state.sensor.molt_peak}
-          />
-
-          {/* Day counter — editorial style, bottom-left of pond */}
-          <div className="absolute bottom-16 left-6 pointer-events-none select-none">
-            <div className="editorial-heading text-[5rem] opacity-20 leading-none">
-              D{state.sensor.day ?? 1}
-            </div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/25 mt-1 ml-1">
-              养殖天数
-            </div>
-          </div>
-
-          {/* Bottom status bar — frosted glass */}
-          <div className="absolute bottom-0 left-0 right-0 h-11 flex items-center justify-between px-6"
-            style={{
-              background: 'linear-gradient(to top, rgba(0,5,15,0.85) 0%, rgba(0,5,15,0.5) 60%, transparent 100%)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-            }}
-          >
-            <div className="flex items-center gap-4 text-xs text-white/40">
-              <span className={connected ? 'text-emerald-400' : 'text-red-400'}>
-                {connected ? '● 已连接' : '○ 离线模式'}
+      {/* Top Header Bar - Premium Editorial */}
+      <header className="relative z-50 flex items-center justify-between px-16 py-10 shrink-0 border-b border-white/10 bg-white/20 backdrop-blur-md">
+        <div className="flex items-center gap-12">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-2 h-2 rounded-full bg-highlight animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">
+                Bloom AI // 实时生态协议
               </span>
-              <span>塘口 {state.sensor.pond_id}</span>
-              <span>{state.sensor.timestamp ? new Date(state.sensor.timestamp).toLocaleTimeString('zh-CN') : '--:--:--'}</span>
             </div>
-            <div className="text-xs text-white/30">
-              CSI:{state.wqar.csi} | 风险:{state.wqar.risk_label}
+            <h1 className="editorial-heading text-6xl tracking-tighter">
+              虾塘大亨<span className="text-highlight">.</span>
+            </h1>
+          </div>
+          
+          <div className="h-16 w-px bg-slate-100" />
+          
+          <div className="flex items-center gap-10">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">市场基准</span>
+              <span className="text-2xl font-black text-slate-900">¥{market.current_price.toFixed(1)}<span className="text-xs text-slate-400 ml-1">/KG</span></span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">模拟速率</span>
+              <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-full border border-slate-100">
+                {[1, 10, 100].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => changeSpeed(s)}
+                    className={`px-4 py-1 rounded-full text-[9px] font-black transition-all ${
+                      speed === s ? 'bg-white text-slate-900 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'
+                    }`}
+                  >
+                    {s}X
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-6">
+          <button className="pill-button">
+            生成分析报告
+          </button>
+          <div className="flex items-center gap-4 pl-6 border-l border-slate-100">
+            <div className="text-right">
+              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">系统管理员</div>
+              <div className="text-xs font-bold text-slate-900">JD_ADMIN</div>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-sm font-black text-slate-900">
+              JD
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content Split Layout */}
+      <div className="flex-1 flex gap-12 px-16 pb-12 min-h-0 relative z-10">
+        
+        {/* Middle Section: Immersive Visualizer + AI Decision */}
+        <section className="flex-[2] flex flex-col gap-8 overflow-y-auto no-scrollbar pb-20">
+          
+          {/* Shrimp Pond Card - Restored to a more prominent size */}
+          <div className="relative liquid-glass-strong overflow-hidden h-[480px] shrink-0 group">
+            <div className="absolute top-8 left-8 z-20">
+              <div className="px-5 py-2 rounded-full bg-white/80 backdrop-blur-xl border border-slate-100 flex items-center gap-3 shadow-sm">
+                <div className="w-2 h-2 rounded-full bg-highlight animate-pulse" />
+                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-900">实时视觉流监控</span>
+              </div>
+            </div>
+
+            <div className="absolute inset-0 z-0">
+              <PondCanvas riskLevel={wqarData?.risk_level || 1} />
+            </div>
+
+            {/* Day Counter */}
+            <div className="absolute bottom-8 left-8 z-20 flex flex-col pointer-events-none">
+              <span className="text-[10px] text-slate-500 uppercase tracking-[0.4em] font-black mb-1">养殖周期进度</span>
+              <div className="editorial-heading text-8xl text-slate-900 tracking-tighter relative">
+                <span className="text-highlight/10 absolute -left-4 -top-6 select-none text-9xl">#</span>
+                <span className="relative">{sensorData?.day || 42}</span>
+              </div>
+            </div>
+
+            {/* Alert and Controls */}
+            <div className="absolute bottom-8 right-8 z-30 flex flex-col items-end gap-4 max-w-md">
+              {alert && alert.level !== 'green' && (
+                <motion.div 
+                  initial={{ x: 50, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  className={`px-6 py-3 rounded-2xl border bg-white shadow-xl flex items-center gap-4 ${
+                    alert.level === 'red' ? 'border-alarm-red/20 text-alarm-red' : 'border-orange-500/20 text-orange-500'
+                  }`}
+                >
+                  <AlertCircle size={20} className="animate-pulse" />
+                  <div className="text-left">
+                    <div className="text-[8px] uppercase font-black tracking-[0.3em] opacity-40 mb-0.5">系统预警</div>
+                    <div className="text-sm font-black tracking-tight uppercase">{alert.message}</div>
+                  </div>
+                </motion.div>
+              )}
+              
+              <div className="glass-card p-6 flex flex-col gap-4 w-full bg-white/90 backdrop-blur-xl">
+                <div className="flex justify-between items-center">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">环境干预协议 // 控制单元</span>
+                </div>
+                <EventButtons onTrigger={triggerScenario} />
+              </div>
             </div>
           </div>
 
-          {/* Alert banner */}
-          <AnimatePresence>
-            {state.alert && (
-              <motion.div
-                initial={{ y: 60, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 60, opacity: 0 }}
-                className={`absolute bottom-12 left-4 right-4 rounded-xl p-4 ${
-                  state.alert.level === 'red'
-                    ? 'bg-red-950/80 border border-red-500/40'
-                    : state.alert.level === 'amber'
-                      ? 'bg-amber-950/80 border border-amber-500/40'
-                      : 'bg-emerald-950/80 border border-emerald-500/40'
-                } backdrop-blur-sm`}
-              >
-                <p className="text-sm font-medium">{state.alert.data.title}</p>
-                <p className="text-xs text-white/60 mt-1">{state.alert.data.message}</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+          {/* AI Decision - Full width in the middle section */}
+          <div className="shrink-0">
+            <AIDecision decision={decision} />
+          </div>
+        </section>
 
-        {/* Right sidebar */}
-        <div className="flex-[35] border-l border-white/5 overflow-y-auto p-4 space-y-4">
-          {/* Metric cards 2x2 */}
-          <div className="grid grid-cols-2 gap-3">
-            {METRIC_CONFIG.map((m) => (
-              <MetricCard
-                key={m.key}
-                name={m.key}
-                label={m.label}
-                unit={m.unit}
-                indicator={
-                  indicators[m.key] || {
-                    value: 0,
-                    status: 'normal' as const,
-                    label: '--',
-                  }
-                }
-              />
-            ))}
+        {/* Right Sidebar: Numerical Data Display */}
+        <section className="flex-1 flex flex-col gap-8 overflow-y-auto no-scrollbar pr-2 min-w-[400px] pb-20">
+          <div className="grid grid-cols-2 gap-6 shrink-0">
+            <MetricCard 
+              label="水温" 
+              value={sensorData?.temp || 25.6} 
+              unit="°C" 
+              range="24-28" 
+              status="normal" 
+            />
+            <MetricCard 
+              label="溶解氧" 
+              value={sensorData?.do || 6.2} 
+              unit="mg/L" 
+              range=">5.0" 
+              status={sensorData?.do && sensorData.do < 3 ? 'danger' : 'optimal'} 
+            />
+            <MetricCard 
+              label="pH 值" 
+              value={sensorData?.ph || 8.1} 
+              unit="ph" 
+              range="7.5-8.5" 
+              status="optimal" 
+            />
+            <MetricCard 
+              label="氨氮" 
+              value={sensorData?.ammonia || 0.17} 
+              unit="mg/L" 
+              range="<0.5" 
+              status={sensorData?.ammonia && sensorData.ammonia > 0.3 ? 'danger' : 'normal'} 
+            />
           </div>
 
-          <ShrimpStatus sensor={state.sensor} wqar={state.wqar} />
-
-          <AIDecision decision={state.decision} />
-
-          <FeishuPreview alert={state.alert} feishuSent={state.feishuSent} />
-
-          <EventButtons onTrigger={handleTrigger} />
-
-          <ROICard sensor={state.sensor} price={price} />
-        </div>
+          <div className="space-y-8 shrink-0">
+            <ShrimpStatus data={shrimp} csiScore={wqarData?.csi_score || 18} />
+            <ROICard data={roi} />
+          </div>
+        </section>
       </div>
-    </div>
+
+      {/* Footer */}
+      <footer className="px-16 py-8 flex justify-between items-center border-t border-white/20 bg-white/30 backdrop-blur-xl shrink-0 relative z-50">
+        <div className="flex items-center gap-12">
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+              最后同步: 2024.03.21 14:30
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+              加密节点: SH-082
+            </span>
+          </div>
+        </div>
+        <span className="text-[9px] font-black text-slate-900 uppercase tracking-[0.3em]">
+          Bloom AI Engine v4.2 // 全自主养殖协议
+        </span>
+      </footer>
+    </main>
   );
 }
-
-export default App;

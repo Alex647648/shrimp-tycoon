@@ -1,61 +1,54 @@
-import { TrendingUp } from 'lucide-react';
-import type { SensorData } from '../types/api';
+
+import React from 'react';
+import { ROIData } from '../types';
+import { Coins } from 'lucide-react';
 
 interface ROICardProps {
-  sensor: SensorData;
-  price: number;
+  data: ROIData | null;
 }
 
-export default function ROICard({ sensor, price }: ROICardProps) {
-  const totalKg = (sensor.count * sensor.avg_weight) / 1000;
-  const totalValue = totalKg * price;
-  const saasFee = 299;
-  const diseaseSaving = 12000;
-  const roi = totalValue > 0 ? ((totalValue - saasFee) / saasFee).toFixed(1) : '0.0';
+export const ROICard: React.FC<ROICardProps> = ({ data }) => {
+  if (!data) return null;
 
   return (
-    <div className="liquid-glass rounded-2xl p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <TrendingUp size={14} className="text-emerald-400" />
-        <h3 className="text-xs text-white/50 font-medium tracking-wider uppercase">
-          ROI 收益预测
-        </h3>
+    <div className="liquid-glass p-10 rounded-[2rem] space-y-10 border border-slate-100 bg-white group">
+      <div className="flex items-center gap-5">
+        <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:border-highlight/20 transition-all">
+          <Coins size={24} className="text-slate-400 group-hover:text-highlight transition-colors" />
+        </div>
+        <div>
+          <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">经济效益展望协议</h3>
+          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">ROI: {data.roi_ratio.toFixed(1)}× // 预测模型</p>
+        </div>
       </div>
 
-      <div className="flex items-baseline gap-2">
-        <span className="font-mono text-3xl font-bold text-emerald-400 drop-shadow-[0_0_12px_rgba(16,185,129,0.3)]">
-          ¥{totalValue.toFixed(0)}
-        </span>
-        <span className="text-xs text-white/30">总产值</span>
+      <div className="grid grid-cols-2 gap-12">
+        <div className="space-y-2">
+          <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">预计总营收</div>
+          <div className="text-4xl font-black text-slate-900 tracking-tighter">
+            ¥{data.revenue_prediction.toLocaleString()}
+          </div>
+        </div>
+        <div className="text-right space-y-2">
+          <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">投资回报倍数</div>
+          <div className="text-4xl font-black text-highlight tracking-tighter">
+            {data.roi_ratio.toFixed(1)}×
+          </div>
+        </div>
       </div>
 
-      <div className="flex items-baseline gap-2">
-        <span className="font-mono text-xl font-bold text-amber-400">
-          {roi}x
-        </span>
-        <span className="text-xs text-white/30">ROI倍数</span>
-      </div>
-
-      <div className="space-y-1.5 text-xs text-white/40 pt-2 border-t border-white/5">
-        <div className="flex justify-between">
-          <span>存活量 × 均重</span>
-          <span className="font-mono text-white/60">
-            {sensor.count} × {sensor.avg_weight.toFixed(1)}g = {totalKg.toFixed(1)}kg
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span>市场价</span>
-          <span className="font-mono text-white/60">¥{price.toFixed(1)}/kg</span>
-        </div>
-        <div className="flex justify-between">
-          <span>SaaS月费</span>
-          <span className="font-mono text-white/60">¥{saasFee}/月</span>
-        </div>
-        <div className="flex justify-between">
-          <span>病害规避</span>
-          <span className="font-mono text-emerald-400/60">+¥{diseaseSaving.toLocaleString()}</span>
+      <div className="space-y-6 pt-10 border-t border-slate-50">
+        <div className="flex justify-between items-center bg-slate-50 p-6 rounded-2xl border border-slate-100">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">系统服务月费</span>
+            <span className="text-sm font-black text-slate-900">¥{data.saas_fee.toLocaleString()}</span>
+          </div>
+          <div className="text-right flex flex-col">
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">风险减损预估</span>
+            <span className="text-sm font-black text-highlight">≈ ¥{data.avoided_loss.toLocaleString()}</span>
+          </div>
         </div>
       </div>
     </div>
   );
-}
+};
