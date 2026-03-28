@@ -19,11 +19,18 @@ interface Shrimp {
   vx: number; vy: number;
   size: number; phase: number; baseY: number;
   legPhase: number;
+  z: number; // depth factor 0..1
 }
 
 interface Bubble {
   x: number; y: number;
   r: number; speed: number; wobble: number;
+}
+
+interface MarineSnow {
+  x: number; y: number;
+  vx: number; vy: number;
+  size: number; opacity: number;
 }
 
 function createShrimps(count: number, w: number, h: number): Shrimp[] {
@@ -35,7 +42,9 @@ function createShrimps(count: number, w: number, h: number): Shrimp[] {
       vy: (Math.random() - 0.5) * 0.2,
       size: 7 + Math.random() * 6,
       phase: Math.random() * Math.PI * 2,
-      baseY: y, legPhase: Math.random() * Math.PI * 2,
+      baseY: y,
+      legPhase: Math.random() * Math.PI * 2,
+      z: Math.random(), // depth 0=far/blurry, 1=close/sharp
     };
   });
 }
@@ -50,6 +59,17 @@ function createBubbles(count: number, w: number, h: number): Bubble[] {
   }));
 }
 
+function createMarineSnow(count: number, w: number, h: number): MarineSnow[] {
+  return Array.from({ length: count }, () => ({
+    x: Math.random() * w,
+    y: Math.random() * h,
+    vx: (Math.random() - 0.5) * 0.1,
+    vy: 0.05 + Math.random() * 0.15,
+    size: 0.5 + Math.random() * 1.5,
+    opacity: 0.04 + Math.random() * 0.18,
+  }));
+}
+
 /** 像素风小龙虾 */
 function drawShrimp(
   ctx: CanvasRenderingContext2D,
@@ -60,10 +80,9 @@ function drawShrimp(
   const facing = s.vx >= 0 ? 1 : -1;
   ctx.scale(facing * s.size * 0.11, s.size * 0.11);
 
-  const swimAngle = Math.sin(t * 2.5 + s.phase) * 6; // body undulation degrees
+  const swimAngle = Math.sin(t * 2.5 + s.phase) * 6;
   const alpha = dead ? 0.45 : 0.82;
 
-  // --- colors ---
   const shellBase  = dead ? `rgba(180,175,170,${alpha})` : `rgba(220,90,50,${alpha})`;
   const shellDark  = dead ? `rgba(140,135,130,${alpha})` : `rgba(170,50,20,${alpha})`;
   const shellLight = dead ? `rgba(210,205,200,${alpha})` : `rgba(255,140,80,${alpha})`;
@@ -74,7 +93,7 @@ function drawShrimp(
   ctx.lineJoin = 'round';
   ctx.lineCap  = 'round';
 
-  // ── TAIL FAN (uropods) ── drawn first so body overlaps
+  // ── TAIL FAN (uropods) ──
   const tailFanParts = [-22, -13, -4, 5, 14];
   tailFanParts.forEach((ang, i) => {
     const fanLen = i === 2 ? 18 : 14;
@@ -89,7 +108,7 @@ function drawShrimp(
     ctx.restore();
   });
 
-  // ── ABDOMEN segments (6 segments, each slightly rotated = curved body) ──
+  // ── ABDOMEN segments ──
   const segCount = 6;
   const segW = [12, 11, 10, 9, 8, 7];
   const segH = [8,  8,  7,  7,  6,  6];
@@ -101,19 +120,16 @@ function drawShrimp(
     ctx.save();
     ctx.translate(segX, cumAngle * 0.6);
     ctx.rotate((cumAngle * Math.PI) / 180);
-    // segment body
     ctx.beginPath();
     ctx.ellipse(0, 0, segW[i] / 2, segH[i] / 2, 0, 0, Math.PI * 2);
     ctx.fillStyle = i % 2 === 0 ? shellBase : shellDark;
     ctx.fill();
-    // segment ridge line
     ctx.beginPath();
     ctx.moveTo(-segW[i] / 2 + 1, -1);
     ctx.lineTo(segW[i] / 2 - 1, -1);
     ctx.strokeStyle = 'rgba(255,255,255,0.12)';
     ctx.lineWidth = 1;
     ctx.stroke();
-    // swimmerets (pleopods) - tiny appendages
     if (i > 0 && i < 5) {
       ctx.beginPath();
       ctx.moveTo(0, segH[i] / 2);
@@ -126,22 +142,19 @@ function drawShrimp(
     segX += segW[i] * 0.75;
   }
 
-  // ── CARAPACE (cephalothorax, the big shell covering head+thorax) ──
+  // ── CARAPACE ──
   ctx.save();
   ctx.translate(18, swimAngle * 0.05);
-  // main carapace body
   ctx.beginPath();
   ctx.ellipse(0, 0, 16, 10, 0, 0, Math.PI * 2);
   ctx.fillStyle = shellBase;
   ctx.fill();
-  // carapace highlight stripe
   ctx.beginPath();
   ctx.ellipse(2, -2, 10, 5, -0.2, 0, Math.PI * 2);
   ctx.fillStyle = shellLight;
   ctx.globalAlpha = 0.25;
   ctx.fill();
   ctx.globalAlpha = 1;
-  // carapace dark edge
   ctx.beginPath();
   ctx.ellipse(0, 0, 16, 10, 0, 0, Math.PI * 2);
   ctx.strokeStyle = shellDark;
@@ -149,7 +162,7 @@ function drawShrimp(
   ctx.stroke();
   ctx.restore();
 
-  // ── WALKING LEGS (5 pairs, below carapace) ──
+  // ── WALKING LEGS ──
   for (let i = 0; i < 5; i++) {
     const legX = 8 + i * (-3.5);
     const swing = Math.sin(t * 3 + s.legPhase + i * 0.9) * 3;
@@ -160,7 +173,6 @@ function drawShrimp(
     ctx.strokeStyle = legCol;
     ctx.lineWidth = 1.3;
     ctx.stroke();
-    // claw on front 2 pairs
     if (i < 2) {
       ctx.beginPath();
       ctx.arc(legX - 1 + swing, 20, 2, 0, Math.PI * 2);
@@ -181,7 +193,7 @@ function drawShrimp(
   ctx.stroke();
   ctx.restore();
 
-  // ── ROSTRUM (pointed spike on top of head) ──
+  // ── ROSTRUM ──
   ctx.save();
   ctx.translate(34, swimAngle * 0.04 - 4);
   ctx.beginPath();
@@ -193,15 +205,13 @@ function drawShrimp(
   ctx.fill();
   ctx.restore();
 
-  // ── EYES (stalked) ──
+  // ── EYES ──
   const eyeSwing = Math.sin(t * 0.8 + s.phase) * 1;
   ctx.save();
   ctx.translate(37, swimAngle * 0.04 - 2 + eyeSwing);
-  // stalk
   ctx.beginPath();
   ctx.moveTo(0, 0); ctx.lineTo(4, -4);
   ctx.strokeStyle = shellDark; ctx.lineWidth = 1.2; ctx.stroke();
-  // eyeball
   ctx.beginPath();
   ctx.arc(4, -4, 2.8, 0, Math.PI * 2);
   ctx.fillStyle = eyeCol; ctx.fill();
@@ -223,7 +233,6 @@ function drawShrimp(
   ctx.quadraticCurveTo(54, -8 + ant2Sway, 76, -2 + ant2Sway);
   ctx.strokeStyle = antennaCol; ctx.lineWidth = 0.7; ctx.stroke();
 
-  // short antennules
   ctx.beginPath();
   ctx.moveTo(38, swimAngle * 0.04);
   ctx.lineTo(46, -6 + ant2Sway * 0.5);
@@ -234,10 +243,11 @@ function drawShrimp(
 }
 
 export default function PondCanvas({ riskLevel, deadShrimp, moltPeak }: PondCanvasProps) {
-  const canvasRef   = useRef<HTMLCanvasElement>(null);
-  const shrimpsRef  = useRef<Shrimp[]>([]);
-  const bubblesRef  = useRef<Bubble[]>([]);
-  const animRef     = useRef<number>(0);
+  const canvasRef     = useRef<HTMLCanvasElement>(null);
+  const shrimpsRef    = useRef<Shrimp[]>([]);
+  const bubblesRef    = useRef<Bubble[]>([]);
+  const snowRef       = useRef<MarineSnow[]>([]);
+  const animRef       = useRef<number>(0);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -252,6 +262,7 @@ export default function PondCanvas({ riskLevel, deadShrimp, moltPeak }: PondCanv
     if (shrimpsRef.current.length === 0) {
       shrimpsRef.current = createShrimps(moltPeak ? 90 : 120, w, h);
       bubblesRef.current = createBubbles(22, w, h);
+      snowRef.current    = createMarineSnow(120, w, h);
     }
 
     ctx.clearRect(0, 0, w, h);
@@ -272,36 +283,47 @@ export default function PondCanvas({ riskLevel, deadShrimp, moltPeak }: PondCanv
     ctx.fillStyle = waterGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // Tyndall light shafts
+    // ── GOD RAYS (improved triangle shafts) ──
     ctx.save();
-    ctx.globalAlpha = 0.03;
+    ctx.globalAlpha = 0.035;
     for (let i = 0; i < 5; i++) {
-      const lx = w * 0.1 + i * (w * 0.18) + Math.sin(t * 0.3 + i) * 20;
-      const shaft = ctx.createLinearGradient(lx, h * 0.2, lx + 30, h * 0.85);
-      shaft.addColorStop(0, 'rgba(180,220,255,0.9)');
+      const lx = w * 0.08 + i * (w * 0.21) + Math.sin(t * 0.25 + i * 1.3) * 28;
+      const rayWidth = 40 + Math.sin(t * 0.4 + i) * 12;
+      const shaft = ctx.createLinearGradient(lx, h * 0.18, lx, h * 0.9);
+      shaft.addColorStop(0, 'rgba(180,230,255,1)');
+      shaft.addColorStop(0.5, 'rgba(140,200,240,0.4)');
       shaft.addColorStop(1, 'transparent');
       ctx.fillStyle = shaft;
       ctx.beginPath();
-      ctx.moveTo(lx, h * 0.2);
-      ctx.lineTo(lx + 35, h * 0.85);
-      ctx.lineTo(lx + 55, h * 0.85);
-      ctx.lineTo(lx + 20, h * 0.2);
+      ctx.moveTo(lx - rayWidth * 0.3, h * 0.18);
+      ctx.lineTo(lx + rayWidth * 0.7, h * 0.18);
+      ctx.lineTo(lx + rayWidth * 2.5, h * 0.9);
+      ctx.lineTo(lx - rayWidth * 2.0, h * 0.9);
+      ctx.closePath();
       ctx.fill();
     }
     ctx.restore();
 
-    // Water surface caustics
+    // ── CAUSTICS (水面焦散光斑) ──
     ctx.save();
-    ctx.globalAlpha = 0.055;
-    for (let i = 0; i < w; i += 3) {
-      const y = h * 0.23 + Math.sin(t * 1.4 + i * 0.018) * 5;
-      ctx.beginPath();
-      ctx.moveTo(i, y);
-      ctx.lineTo(i, y + 35 + Math.sin(t + i * 0.05) * 12);
-      ctx.strokeStyle = '#aee';
-      ctx.lineWidth = 1;
-      ctx.stroke();
+    ctx.globalAlpha = 0.045;
+    ctx.globalCompositeOperation = 'screen';
+    for (let i = 0; i < 3; i++) {
+      const shift = t * (0.6 + i * 0.35);
+      ctx.fillStyle = 'rgba(100,210,255,1)';
+      for (let cx = 0; cx < w; cx += 48) {
+        for (let cy = h * 0.2; cy < h * 0.75; cy += 48) {
+          const noise = Math.sin(cx * 0.012 + shift) * Math.cos(cy * 0.012 + shift * 0.7);
+          if (noise > 0.55) {
+            const r = 2 + noise * 4;
+            ctx.beginPath();
+            ctx.arc(cx + Math.sin(shift + cy) * 8, cy + Math.cos(shift + cx) * 8, r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
 
     // Bottom mud gradient
@@ -311,7 +333,25 @@ export default function PondCanvas({ riskLevel, deadShrimp, moltPeak }: PondCanv
     ctx.fillStyle = mudGrad;
     ctx.fillRect(0, h * 0.82, w, h * 0.18);
 
+    // ── MARINE SNOW ──
+    ctx.save();
+    snowRef.current.forEach((p) => {
+      p.x += p.vx + Math.sin(t + p.x * 0.01) * 0.05;
+      p.y += p.vy;
+      if (p.y > h + 10) { p.y = -10; p.x = Math.random() * w; }
+      if (p.x > w) p.x = 0;
+      if (p.x < 0) p.x = w;
+
+      ctx.globalAlpha = p.opacity;
+      ctx.fillStyle = 'rgba(200,235,255,1)';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+
     // Bubbles
+    ctx.save();
     bubblesRef.current.forEach((b) => {
       b.y -= b.speed;
       b.x += Math.sin(t * 2 + b.wobble) * 0.25;
@@ -324,10 +364,13 @@ export default function PondCanvas({ riskLevel, deadShrimp, moltPeak }: PondCanv
       ctx.fillStyle = `rgba(200,240,255,${0.04 + b.r * 0.015})`;
       ctx.fill();
     });
+    ctx.restore();
 
-    // Shrimps
+    // ── SHRIMPS with depth-of-field blur ──
     const floatUp = riskLevel >= 4;
-    shrimpsRef.current.forEach((s) => {
+    // Sort by z so far shrimps render first
+    const sorted = [...shrimpsRef.current].sort((a, b) => a.z - b.z);
+    sorted.forEach((s) => {
       s.phase    += 0.009;
       s.legPhase += 0.015;
       s.x += s.vx;
@@ -346,15 +389,14 @@ export default function PondCanvas({ riskLevel, deadShrimp, moltPeak }: PondCanv
       if (s.x > w + 60) s.x = -60;
       if (s.y > h * 0.94) { s.vy = -Math.abs(s.vy); s.y = h * 0.94; }
 
+      // Depth of field: far shrimps (z→0) get blur and lower opacity
+      const blur = (1 - s.z) * 2.2;
+      ctx.filter = blur > 0.3 ? `blur(${blur.toFixed(1)}px)` : 'none';
+      ctx.globalAlpha = 0.55 + s.z * 0.45;
       drawShrimp(ctx, s, t, deadShrimp);
+      ctx.filter = 'none';
+      ctx.globalAlpha = 1;
     });
-
-    // Scan lines
-    ctx.save();
-    ctx.globalAlpha = 0.028;
-    ctx.fillStyle = '#000';
-    for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1);
-    ctx.restore();
 
     animRef.current = requestAnimationFrame(draw);
   }, [riskLevel, deadShrimp, moltPeak]);
@@ -373,6 +415,7 @@ export default function PondCanvas({ riskLevel, deadShrimp, moltPeak }: PondCanv
         const ctx = canvas.getContext('2d');
         if (ctx) ctx.scale(dpr, dpr);
         shrimpsRef.current = [];
+        snowRef.current    = [];
       }
     };
     resize();
@@ -387,13 +430,6 @@ export default function PondCanvas({ riskLevel, deadShrimp, moltPeak }: PondCanv
   return (
     <div className="relative w-full h-full">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.18) 2px,rgba(0,0,0,0.18) 3px)',
-        }}
-      />
     </div>
   );
 }

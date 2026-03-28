@@ -26,7 +26,7 @@ export default function Header({
   })();
 
   return (
-    <header className="h-16 flex items-center justify-between px-6 liquid-glass border-b border-white/10 z-50 relative">
+    <header className="h-20 flex items-center justify-between px-8 liquid-glass border-b border-white/10 z-50 relative">
       {/* Logo */}
       <div className="flex items-center gap-3">
         <span className="text-2xl">🦐</span>

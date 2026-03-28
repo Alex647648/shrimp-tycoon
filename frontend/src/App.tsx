@@ -209,8 +209,24 @@ function App() {
             moltPeak={state.sensor.molt_peak}
           />
 
-          {/* Bottom status bar */}
-          <div className="absolute bottom-0 left-0 right-0 h-10 flex items-center justify-between px-6 bg-gradient-to-t from-black/80 to-transparent">
+          {/* Day counter — editorial style, bottom-left of pond */}
+          <div className="absolute bottom-16 left-6 pointer-events-none select-none">
+            <div className="editorial-heading text-[5rem] opacity-20 leading-none">
+              D{state.sensor.day ?? 1}
+            </div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/25 mt-1 ml-1">
+              养殖天数
+            </div>
+          </div>
+
+          {/* Bottom status bar — frosted glass */}
+          <div className="absolute bottom-0 left-0 right-0 h-11 flex items-center justify-between px-6"
+            style={{
+              background: 'linear-gradient(to top, rgba(0,5,15,0.85) 0%, rgba(0,5,15,0.5) 60%, transparent 100%)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+          >
             <div className="flex items-center gap-4 text-xs text-white/40">
               <span className={connected ? 'text-emerald-400' : 'text-red-400'}>
                 {connected ? '● 已连接' : '○ 离线模式'}
