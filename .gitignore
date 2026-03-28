@@ -39,3 +39,4 @@ backend/__pycache__/
 mcp/__pycache__/
 tools.py
 frontend/.gitignore
+ppt-assets/
